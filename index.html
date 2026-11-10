@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>マッピングシナリオ・プロンプトジェネレーター</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8 text-gray-800">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold mb-6 text-indigo-600">プロジェクションマッピング シナリオジェネレーター</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- 基本情報 -->
+            <div>
+                <label class="block text-sm font-bold mb-1">プロジェクト名（タイトル）</label>
+                <input type="text" id="p_title" class="w-full border p-2 rounded" placeholder="未入力でAIが提案">
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">目的</label>
+                <input type="text" id="p_purpose" class="w-full border p-2 rounded" placeholder="例：インバウンド向け観光誘致、歴史の啓蒙">
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">投影場所</label>
+                <input type="text" id="p_location" class="w-full border p-2 rounded" placeholder="例：歴史的建造物、城壁など">
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">投影予定日（季節）</label>
+                <input type="text" id="p_season" class="w-full border p-2 rounded" placeholder="例：11月（秋）、紅葉を意識">
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">時間（動画の長さ）</label>
+                <input type="text" id="p_duration" class="w-full border p-2 rounded" placeholder="例：3分、180秒">
+            </div>
+            <div>
+                <label class="block text-sm font-bold mb-1">画像生成・シナリオ用LLMの指定</label>
+                <select id="p_imageai" class="w-full border p-2 rounded">
+                    <option value="ChatGPT (GPT-4o / DALL-E 3)">ChatGPT (GPT-4o / DALL-E 3)</option>
+                    <option value="Gemini (Gemini 1.5 Pro / Imagen)">Gemini (Gemini 1.5 Pro / Imagen)</option>
+                    <option value="Claude (シナリオ生成・プロンプト出力のみ)">Claude (シナリオ生成・プロンプト出力のみ)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-bold mb-2">建築物の形状特性（複数選択可）</label>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-2 bg-gray-50 p-4 rounded border">
+                <label class="flex items-center space-x-2"><input type="checkbox" name="shape" value="縦長"> <span>縦長</span></label>
+                <label class="flex items-center space-x-2"><input type="checkbox" name="shape" value="横長"> <span>横長</span></label>
+                <label class="flex items-center space-x-2"><input type="checkbox" name="shape" value="立体的・奥行きがある"> <span>立体的・奥行きがある</span></label>
+                <label class="flex items-center space-x-2"><input type="checkbox" name="shape" value="階層的・層になっている"> <span>階層的・層になっている</span></label>
+                <label class="flex items-center space-x-2"><input type="checkbox" name="shape" value="直線的・幾何学的"> <span>直線的・幾何学的</span></label>
+                <label class="flex items-center space-x-2"><input type="checkbox" name="shape" value="曲線的・有機的"> <span>曲線的・有機的</span></label>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <label class="block text-sm font-bold mb-1">サーフェイスの複雑度</label>
+                <select id="p_surface" class="w-full border p-2 rounded">
+                    <option value="非常に複雑（瓦、細かい装飾、凹凸が激しい）">非常に複雑（瓦、細かい装飾、凹凸が激しい）</option>
+                    <option value="普通（石垣、一般的な外壁など）">普通（石垣、一般的な外壁など）</option>
+                    <option value="平面（滑らかなコンクリートなど）">平面（滑らかなコンクリートなど）</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-bold mb-1">特記事項（モチーフ指定、クライアント要望など）</label>
+            <textarea id="p_notes" class="w-full border p-2 rounded h-24" placeholder="例：地域固有の伝説を盛り込む、水引をモチーフにする、等"></textarea>
+        </div>
+
+        <div class="mb-6">
+            <label class="block text-sm font-bold mb-1">タイムライン出力形式</label>
+            <select id="p_export_format" class="w-full border p-2 rounded">
+                <option value="CSV形式のコードブロック（カンマ区切り、そのままスプレッドシートにコピペ可能）">CSV形式のコードブロック（スプレッドシート用）</option>
+                <option value="Markdown形式のテーブル（そのままドキュメントに貼り付け可能）">Markdown形式のテーブル</option>
+            </select>
+        </div>
+
+        <button onclick="generatePrompt()" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded hover:bg-indigo-700 transition">
+            メタプロンプトを生成する
+        </button>
+
+        <div class="mt-8">
+            <h2 class="text-xl font-bold mb-2">生成されたプロンプト</h2>
+            <p class="text-sm text-gray-600 mb-2">このテキストをコピーして、指定したLLMに貼り付けてください。</p>
+            <textarea id="output_prompt" class="w-full border p-4 rounded bg-gray-50 h-80 font-mono text-sm leading-relaxed" readonly></textarea>
+            <button onclick="copyToClipboard()" class="mt-2 bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded hover:bg-gray-300">
+                クリップボードにコピー
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function generatePrompt() {
+            const title = document.getElementById('p_title').value || "（AIに提案させる）";
+            const purpose = document.getElementById('p_purpose').value || "未指定";
+            const location = document.getElementById('p_location').value || "未指定";
+            const season = document.getElementById('p_season').value || "未指定";
+            const duration = document.getElementById('p_duration').value || "未指定";
+            const surface = document.getElementById('p_surface').value;
+            const imageai = document.getElementById('p_imageai').value;
+            const notes = document.getElementById('p_notes').value || "特になし";
+            const exportFormat = document.getElementById('p_export_format').value;
+
+            // チェックボックスから形状特性を取得
+            const shapeCheckboxes = document.querySelectorAll('input[name="shape"]:checked');
+            const shapes = Array.from(shapeCheckboxes).map(cb => cb.value).join('、') || "指定なし";
+
+            const prompt = \`あなたはプロのプロジェクションマッピング・ディレクターです。
+以下の要件に従い、映像制作のための時系列シナリオと絵コンテ用画像生成プロンプトを作成してください。
+
+【基本要件】
+- タイトル: \${title}（未入力の場合はテーマに合うものを3つ提案）
+- 目的・ゴール: \${purpose}
+- 投影対象・場所: \${location}
+- 投影予定日（季節感）: \${season}
+- 映像の長さ: \${duration}
+- 特記事項: \${notes}
+
+【空間・物理的制約】
+- 建築物の形状特性: \${shapes}
+  ※これらの形状特性（縦横の広がり、奥行き、階層など）を予測・分析し、形状を活かした空間構成やパースペクティブをシナリオの動きに反映してください。
+- サーフェイスの複雑度: \${surface}
+  ※複雑な場合は細部の描写を避け、シルエットや大きな動き、高コントラストな映像構成を指示してください。
+- マッピング特有の演出: 建物の崩壊、変形、スキャンライン、パーティクル等のイリュージョン演出を適宜盛り込んでください。
+- 色彩・輝度: プロジェクターの黒浮きを考慮し、暗闇で映える高コントラストな色使い（黒背景ベース）を指定してください。
+
+【出力フォーマット】
+以下の構成で出力してください。
+
+1. 全体の演出方針とコンセプト（形状特性をどう活かすかの解説を含む）
+2. タイムライン表
+   - 初心者の制作者が同じ動きを長く使って冗長になるのを防ぐため、1シーン（セクション）を「10〜20秒程度」の短いスパンで細かく区切ってください。
+   - 各シーンの中での「細かな動きの変化（エフェクトの推移、視線誘導、カメラワーク、アニメーションの具体的な動き）」を詳細に指定してください。
+   - \${exportFormat}で出力してください。
+   - カラム構成: [時間(例:0:00〜0:15)], [シーン名], [映像の細かな動き・エフェクトの推移・視線誘導], [マッピング特有の演出], [BGM・音響提案(BPM, キー, 曲調)]
+3. 絵コンテ用画像生成プロンプト
+   - 使用LLM: \${imageai} 向け
+   - LLMが直接画像を生成、または出力しやすい自然言語（英語）で記述。
+   - 各シーンの情景、建築物の形状特性、マッピングの投影制約（黒背景・高コントラスト）をプロンプト内に含めること。\`;
+
+            document.getElementById('output_prompt').value = prompt;
+        }
+
+        function copyToClipboard() {
+            const copyText = document.getElementById("output_prompt");
+            copyText.select();
+            document.execCommand("copy");
+            alert("クリップボードにコピーしました！");
+        }
+    </script>
+</body>
+</html>
